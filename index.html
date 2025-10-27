@@ -12,14 +12,19 @@
         margin: 0 auto;
         padding: 20px;
         background-color: #f4f4f4;
+        background-image: url(landersangeles.jpg);
+        background-size: contain;
     }
     h1, h2 { color: #333; }
     form {
-        background: white;
-        padding: 20px;
-        border-radius: 8px;
-        box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        margin-bottom: 20px;
+        background: rgba(255, 255, 255, 0.2); /* semi-transparent white */
+  backdrop-filter: blur(10px); /* glass blur effect */
+  -webkit-backdrop-filter: blur(10px); /* for Safari */
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.3); /* subtle border to enhance glass look */
     }
     label {
         display: block;
@@ -45,11 +50,14 @@
     }
     button:hover { background: #0056b3; }
     #summary, #graphs {
-        background: white;
-        padding: 20px;
-        border-radius: 8px;
-        box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        margin-bottom: 20px;
+        background: rgba(255, 255, 255, 0.2); /* semi-transparent white */
+  backdrop-filter: blur(10px); /* glass blur effect */
+  -webkit-backdrop-filter: blur(10px); /* for Safari */
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.3); /* subtle border to enhance glass look */
     }
     .stat {
         margin: 10px 0;
