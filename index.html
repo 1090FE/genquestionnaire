@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Questionnaire Summary Tool</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #f4f4f4;
+    }
+    h1, h2 { color: #333; }
+    form {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    label {
+        display: block;
+        margin: 10px 0 5px;
+        font-weight: bold;
+    }
+    input[type="text"], textarea {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        box-sizing: border-box;
+    }
+    input[type="radio"], input[type="checkbox"] { margin-right: 5px; }
+    button {
+        background: #007bff;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        margin: 10px 5px;
+    }
+    button:hover { background: #0056b3; }
+    #summary, #graphs {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    .stat {
+        margin: 10px 0;
+        padding: 10px;
+        background: #e9ecef;
+        border-radius: 4px;
+    }
+    canvas { max-width: 100%; margin: 20px 0; }
+    #exportBtn { background: #28a745; }
+    #exportBtn:hover { background: #218838; }
+    #clearBtn { background: #dc3545; }
+    #clearBtn:hover { background: #c82333; }
+</style>
+</head>
+<body>
+<h1>Questionnaire Summary Tool</h1>
+
+<!-- FORM SECTION -->
+<section>
+<h2>Input Member Response</h2>
+<form id="questionnaireForm">
+    <label>1. How’s your experience in shopping at Landers today?</label>
+    <textarea name="q1" rows="3" placeholder="Enter response..."></textarea><br><br>
+
+    <label>2. Are you satisfied with the service and product we offered you?</label>
+    <input type="radio" name="q2" value="yes"> Yes
+    <input type="radio" name="q2" value="no"> No<br><br>
+
+    <label>3. What are the areas that we need to improve based on your shopping experience?</label>
+    <textarea name="q3" rows="3" placeholder="Enter response..."></textarea><br><br>
+
+    <label>4. Are you going to visit again in Landers?</label>
+    <input type="radio" name="q4" value="yes"> Yes
+    <input type="radio" name="q4" value="no"> No<br><br>
+
+    <label>5. How often do you visit Landers?</label>
+    <textarea name="q5" rows="3" placeholder="Enter response..."></textarea><br><br>
+
+    <label>6. Are you aware of our latest promo?</label>
+    <input type="radio" name="q6" value="yes"> Yes
+    <input type="radio" name="q6" value="no"> No<br><br>
+
+    <label>7. Is this the reason why you visit the store today?</label>
+    <textarea name="q7" rows="3" placeholder="Enter response..."></textarea><br><br>
+
+    <label>Comments or Suggestions:</label>
+    <textarea name="comments" rows="3" placeholder="Enter Comments or Suggestions..."></textarea><br><br>
+
+    <button type="submit">Submit Response</button>
+    <button type="button" id="clearForm">Clear Form</button>
+</form>
+</section>
+
+<!-- SUMMARY SECTION -->
+<section id="summary">
+<h2>Summary</h2>
+<div id="summaryContent">
+    <p>No responses yet. Submit some to see summary.</p>
+</div>
+<button id="loadSummary">Load Summary</button>
+<button id="clearAll">Clear All Data</button>
+</section>
+
+<!-- GRAPHS SECTION -->
+<section id="graphs">
+<h2>Graphs</h2>
+<canvas id="q2Chart"></canvas>
+<canvas id="q4Chart"></canvas>
+<canvas id="q6Chart"></canvas>
+<canvas id="textSummaryChart"></canvas>
+<canvas id="commentsChart"></canvas>
+</section>
+
+<button id="exportBtn">Export to CSV (Excel Compatible)</button>
+
+<script>
+const STORAGE_KEY = 'landersResponses';
+
+// Load and Save
+function loadResponses() {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    return stored ? JSON.parse(stored) : [];
+}
+function saveResponses(responses) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(responses));
+}
+
+// Compute summary
+function computeSummary(responses) {
+    const summary = {
+        total: responses.length,
+        q2: { yes: 0, no: 0 },
+        q4: { yes: 0, no: 0 },
+        q6: { yes: 0, no: 0 },
+        textResponses: [],
+        comments: []
+    };
+    responses.forEach(r => {
+        if (r.q2 === 'yes') summary.q2.yes++; else if (r.q2 === 'no') summary.q2.no++;
+        if (r.q4 === 'yes') summary.q4.yes++; else if (r.q4 === 'no') summary.q4.no++;
+        if (r.q6 === 'yes') summary.q6.yes++; else if (r.q6 === 'no') summary.q6.no++;
+        summary.textResponses.push(r.q1, r.q3, r.q5, r.q7);
+        if (r.comments) summary.comments.push(r.comments);
+    });
+    return summary;
+}
+
+// Display Summary
+function displaySummary() {
+    const responses = loadResponses();
+    if (!responses.length) {
+        document.getElementById('summaryContent').innerHTML = '<p>No responses yet.</p>';
+        return;
+    }
+    const s = computeSummary(responses);
+    let html = `
+        <div class="stat"><strong>Total Responses:</strong> ${s.total}</div>
+        <div class="stat"><strong>Q2 - Satisfied:</strong> Yes: ${s.q2.yes}, No: ${s.q2.no}</div>
+        <div class="stat"><strong>Q4 - Visit Again:</strong> Yes: ${s.q4.yes}, No: ${s.q4.no}</div>
+        <div class="stat"><strong>Q6 - Aware of Promo:</strong> Yes: ${s.q6.yes}, No: ${s.q6.no}</div>
+        <div class="stat"><strong>Comments/Suggestions:</strong></div>
+        <ul>${s.comments.map(c=>`<li>${c}</li>`).join('')}</ul>
+    `;
+    document.getElementById('summaryContent').innerHTML = html;
+}
+
+// Draw Graphs
+let q2Chart,q4Chart,q6Chart,textChart,commentsChart;
+function drawGraphs(){
+    const responses = loadResponses();
+    if(!responses.length) return;
+    const s = computeSummary(responses);
+
+    // Q2 Chart
+    const ctx2=document.getElementById('q2Chart').getContext('2d');
+    if(q2Chart) q2Chart.destroy();
+    q2Chart=new Chart(ctx2,{
+        type:'bar',
+        data:{labels:['Yes','No'],datasets:[{label:'Q2 Responses',data:[s.q2.yes,s.q2.no],backgroundColor:['#28a745','#dc3545']}]},
+        options:{plugins:{title:{display:true,text:'Q2: Satisfied with Service and Product'}}}
+    });
+
+    // Q4 Chart
+    const ctx4=document.getElementById('q4Chart').getContext('2d');
+    if(q4Chart) q4Chart.destroy();
+    q4Chart=new Chart(ctx4,{
+        type:'bar',
+        data:{labels:['Yes','No'],datasets:[{label:'Q4 Responses',data:[s.q4.yes,s.q4.no],backgroundColor:['#28a745','#dc3545']}]},
+        options:{plugins:{title:{display:true,text:'Q4: Visit Again in Landers'}}}
+    });
+
+    // Q6 Chart
+    const ctx6=document.getElementById('q6Chart').getContext('2d');
+    if(q6Chart) q6Chart.destroy();
+    q6Chart=new Chart(ctx6,{
+        type:'bar',
+        data:{labels:['Yes','No'],datasets:[{label:'Q6 Responses',data:[s.q6.yes,s.q6.no],backgroundColor:['#28a745','#dc3545']}]},
+        options:{plugins:{title:{display:true,text:'Q6: Aware of Latest Promo'}}}
+    });
+
+    // Text Word Frequency Chart (Q1, Q3, Q5, Q7)
+    const wordCount={};
+    s.textResponses.join(' ').toLowerCase().split(/\s+/).forEach(w=>{
+        if(w.length>3) wordCount[w]=(wordCount[w]||0)+1;
+    });
+    const topWords=Object.entries(wordCount).sort((a,b)=>b[1]-a[1]).slice(0,10);
+    const ctxText=document.getElementById('textSummaryChart').getContext('2d');
+    if(textChart) textChart.destroy();
+    textChart=new Chart(ctxText,{
+        type:'bar',
+        data:{labels:topWords.map(e=>e[0]),datasets:[{label:'Word Frequency',data:topWords.map(e=>e[1]),backgroundColor:'#007bff'}]},
+        options:{plugins:{title:{display:true,text:'Most Common Words from Open Responses'}}}
+    });
+
+    // Comments Sentiment Chart
+    let pos=0,neg=0;
+    const posWords=["good","great","excellent","love","nice","amazing","happy","satisfied","enjoy"];
+    const negWords=["bad","poor","terrible","hate","disappointed","expensive","slow","unsatisfied"];
+    s.comments.forEach(c=>{
+        const t=c.toLowerCase();
+        if(posWords.some(w=>t.includes(w))) pos++;
+        else if(negWords.some(w=>t.includes(w))) neg++;
+    });
+    const ctxCom=document.getElementById('commentsChart').getContext('2d');
+    if(commentsChart) commentsChart.destroy();
+    commentsChart=new Chart(ctxCom,{
+        type:'bar',
+        data:{labels:['Positive','Negative'],datasets:[{label:'Comments Sentiment',data:[pos,neg],backgroundColor:['#28a745','#dc3545']}]},
+        options:{plugins:{title:{display:true,text:'Comments / Suggestions Sentiment Analysis'}},scales:{y:{beginAtZero:true}}}
+    });
+}
+
+// Export CSV
+function exportToCSV(){
+    const responses=loadResponses();
+    if(!responses.length){alert('No data to export');return;}
+    let csv='Q1 Experience,Q2 Satisfied,Q3 Improvement,Q4 Visit Again,Q5 Frequency,Q6 Aware Promo,Q7 Reason,Comments\n';
+    responses.forEach(r=>{
+        csv+=`"${r.q1}","${r.q2}","${r.q3}","${r.q4}","${r.q5}","${r.q6}","${r.q7}","${r.comments}"\n`;
+    });
+    const blob=new Blob([csv],{type:'text/csv'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download='landers_questionnaire.csv';a.click();
+    URL.revokeObjectURL(url);
+}
+
+// Handle form
+document.getElementById('questionnaireForm').addEventListener('submit',e=>{
+    e.preventDefault();
+    const fd=new FormData(e.target);
+    const r={
+        q1:fd.get('q1')||'',
+        q2:fd.get('q2')||'',
+        q3:fd.get('q3')||'',
+        q4:fd.get('q4')||'',
+        q5:fd.get('q5')||'',
+        q6:fd.get('q6')||'',
+        q7:fd.get('q7')||'',
+        comments:fd.get('comments')||''
+    };
+    const responses=loadResponses();responses.push(r);saveResponses(responses);
+    e.target.reset();
+    alert('Response saved!');
+});
+
+// Clear Form
+document.getElementById('clearForm').addEventListener('click',()=>{document.getElementById('questionnaireForm').reset();});
+
+// Buttons
+document.getElementById('loadSummary').addEventListener('click',()=>{displaySummary();drawGraphs();});
+document.getElementById('clearAll').addEventListener('click',()=>{
+    if(confirm('Clear all saved responses?')){
+        localStorage.removeItem(STORAGE_KEY);
+        document.getElementById('summaryContent').innerHTML='<p>No responses yet.</p>';
+        [q2Chart,q4Chart,q6Chart,textChart,commentsChart].forEach(c=>c?.destroy());
+    }
+});
+document.getElementById('exportBtn').addEventListener('click',exportToCSV);
+
+// Initial load
+displaySummary();drawGraphs();
+</script>
+</body>
+</html>
